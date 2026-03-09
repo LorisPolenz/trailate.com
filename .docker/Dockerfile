@@ -3,7 +3,9 @@ FROM python:3.13-slim AS builder
 WORKDIR /app
 
 
-COPY **/*.py .
+COPY helpers/ helpers/
+COPY pages/ pages/
+COPY app.py app.py
 COPY requirements.txt requirements.txt
 
 RUN apt-get update && apt-get install -y \
