@@ -28,8 +28,9 @@ if "available_departure_stops" not in st.session_state:
     st.session_state['available_departure_stops'] = None
 
 
-st.header("bettersbb.ch")
-# st.write("Check delays of your train, with an accuracy of 6 seconds and before the train is more late more than 3 minutes.")
+# st.header("trailate.com")
+st.write("Check delays of your train, with an accuracy of 6 seconds and before the train is more late more than 3 minutes.")
+st.write("Enter the train route you want to check delays for. You can query data no older than 3 hours.")
 st.write(
     f"Last data from ~{int(round((datetime.now(tz=pytz.utc) - datetime.fromisoformat(last_entry_ts)).seconds / 60, 0))} mins ago.")
 
