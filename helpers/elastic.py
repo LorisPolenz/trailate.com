@@ -181,7 +181,7 @@ def fetch_trip_id(route_short_name: str, trip_headsign: str, stop_name: str, sto
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": "now-24h"
+                                "gte": "now-12h"
                             }
                         }
                     },
@@ -344,3 +344,42 @@ def get_departure_stops(routes: list, trip_headsign):
     )
 
     return [x['key'] for x in res['aggregations']['stops']['buckets']]
+
+
+@st.cache_data(ttl=120)
+def get_autocomplete_stops(term: str) -> list[tuple[str, dict]]:
+
+    es_client = get_es_client()
+
+    res = es_client.search(
+        query={
+            "multi_match": {
+                "query": term,
+                "type": "bool_prefix",
+                "fields": [
+                    "stop_name",
+                    "stop_name._2gram",
+                    "stop_name._3gram"
+                ]
+            }
+        }
+    )
+
+    titles = []
+
+    for hit in res['hits']['hits']:
+        source = hit['_source']
+
+        if not source['parent_station']:
+            continue
+
+        element = (source['stop_name'], {
+            "stop_parent": source['parent_station']
+        })
+
+        if element in titles:
+            continue
+
+        titles.append(element)
+
+    return titles
