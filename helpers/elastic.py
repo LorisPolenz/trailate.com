@@ -25,6 +25,25 @@ def get_es_client():
     return es_client
 
 
+@st.cache_resource(ttl=300)
+def get_es_client_single():
+    if not os.getenv("ELASTIC_SINGLE_HOST") or not os.getenv("ELASTIC_SINGLE_API_KEY") or not os.getenv("ELASTIC_SINGLE_INDEX"):
+        logger.error(
+            "env not defined (ELASTIC_SINGLE_HOST, ELASTIC_SINGLE_API_KEY, ELASTIC_SINGLE_INDEX)"
+        )
+        exit(1)
+
+    es_client = Elasticsearch(
+        hosts=os.getenv("ELASTIC_SINGLE_HOST"),
+        api_key=os.getenv("ELASTIC_SINGLE_API_KEY")
+    )
+
+    if not es_client.info()['tagline']:
+        raise Exception("Could not load the client")
+
+    return es_client
+
+
 @st.cache_data(ttl=120)
 def get_most_recent_bucket():
     logger.info("Fetching most recent bucket timestamp")
@@ -36,7 +55,7 @@ def get_most_recent_bucket():
         query={
             "range": {
                 "@timestamp": {
-                    "gte": "now-1h"
+                    "gte": "now-6h"
                 }
             }
         },
@@ -74,7 +93,7 @@ def fetch_routes():
                         "range": {
                             "@timestamp": {
                                 "format": "strict_date_optional_time",
-                                "gte": "now-2h"
+                                "gte": "now-8h"
                             }
                         }
                     }
@@ -113,7 +132,7 @@ def fetch_route_delay_historic(trip_id: str):
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": "now-300m"
+                                "gte": "now-12h"
                             }
                         }
                     }
@@ -234,7 +253,7 @@ def fetch_stop_departure_times(route_short_name: str, trip_headsign: str, stop_n
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": "now-3h"
+                                "gte": "now-6h"
                             }
                         }
                     },
@@ -383,3 +402,19 @@ def get_autocomplete_stops(term: str) -> list[tuple[str, dict]]:
         titles.append(element)
 
     return titles
+
+
+def save_notification_request(start_stop: str, start_time: str, route_short_name: str, ntfy_url: str):
+    es_client = get_es_client_single()
+
+    res = es_client.index(
+        index=str(os.getenv("ELASTIC_SINGLE_INDEX")),
+        document={
+            "start_stop": start_stop,
+            "start_time": start_time,
+            "route_short_name": route_short_name,
+            "ntfy_url": ntfy_url
+        }
+    )
+
+    print(res)
